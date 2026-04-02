@@ -15,7 +15,7 @@ export default function TryOnResult({ resultImage }: Props) {
       <a
         href={resultImage}
         download="mirra-result.png"
-        className="inline-block mt-3 text-[9px] tracking-[0.1em] uppercase font-light text-neutral-300 hover:text-black transition-colors duration-500"
+        className="inline-block mt-3 text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-500"
       >
         Save
       </a>

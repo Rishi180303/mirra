@@ -84,7 +84,7 @@ export default function App() {
         </span>
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className="text-[9px] tracking-[0.12em] uppercase font-light text-neutral-300 hover:text-neutral-600 transition-colors duration-500"
+          className="text-[9px] tracking-[0.12em] uppercase font-light text-neutral-400 hover:text-neutral-600 transition-colors duration-500"
         >
           {showSettings ? "Close" : "Settings"}
         </button>
@@ -101,7 +101,7 @@ export default function App() {
                 className={`flex-1 text-[9px] tracking-[0.08em] uppercase py-2 transition-all duration-500 ${
                   speedMode === mode
                     ? "text-black"
-                    : "text-neutral-300 hover:text-neutral-500"
+                    : "text-neutral-400 hover:text-neutral-500"
                 }`}
               >
                 {mode === "performance" ? "Fast" : mode === "balanced" ? "Balanced" : "Quality"}
@@ -123,7 +123,7 @@ export default function App() {
           disabled={loading || !personImage || !garment}
           className={`w-full py-3 text-[10px] tracking-[0.2em] uppercase transition-all duration-500 ${
             loading || !personImage || !garment
-              ? "text-neutral-200 cursor-default"
+              ? "text-neutral-400 cursor-default"
               : "text-black hover:tracking-[0.3em]"
           }`}
         >

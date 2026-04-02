@@ -6,7 +6,7 @@ interface Props {
 export default function StatusBar({ loading, error }: Props) {
   if (loading) {
     return (
-      <span className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-300 animate-pulse">
+      <span className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 animate-pulse">
         Generating
       </span>
     );

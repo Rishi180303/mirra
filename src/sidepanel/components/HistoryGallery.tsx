@@ -33,7 +33,7 @@ export default function HistoryGallery() {
     <div>
       <button
         onClick={() => setOpen(!open)}
-        className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-200 hover:text-neutral-500 transition-colors duration-500"
+        className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-neutral-500 transition-colors duration-500"
       >
         {open ? "Close" : `History (${history.length})`}
       </button>

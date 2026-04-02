@@ -39,13 +39,13 @@ export default function PhotoUpload({ personImage, onImageChange }: Props) {
           <div className="flex gap-6 mt-4">
             <button
               onClick={() => fileRef.current?.click()}
-              className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-300 hover:text-black transition-colors duration-500"
+              className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-500"
             >
               Change
             </button>
             <button
               onClick={handleRemove}
-              className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-300 hover:text-black transition-colors duration-500"
+              className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-500"
             >
               Remove
             </button>
@@ -56,7 +56,7 @@ export default function PhotoUpload({ personImage, onImageChange }: Props) {
           onClick={() => fileRef.current?.click()}
           className="py-16 text-center cursor-pointer group"
         >
-          <span className="text-[9px] tracking-[0.15em] uppercase font-light text-neutral-300 group-hover:text-neutral-500 transition-colors duration-500">
+          <span className="text-[9px] tracking-[0.15em] uppercase font-light text-neutral-400 group-hover:text-neutral-500 transition-colors duration-500">
             Upload photo
           </span>
         </div>

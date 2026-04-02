@@ -22,7 +22,7 @@ export default function ManualGarmentInput() {
     return (
       <button
         onClick={() => setShow(true)}
-        className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-200 hover:text-neutral-500 transition-colors duration-500 self-start"
+        className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-neutral-500 transition-colors duration-500 self-start"
       >
         Paste URL
       </button>
@@ -37,12 +37,12 @@ export default function ManualGarmentInput() {
         onChange={(e) => setUrl(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
         placeholder="Image URL"
-        className="flex-1 border-b border-neutral-100 focus:border-neutral-400 outline-none text-[10px] font-light py-1 transition-colors duration-500 bg-transparent placeholder-neutral-200"
+        className="flex-1 border-b border-neutral-200 focus:border-neutral-400 outline-none text-[10px] font-light py-1 transition-colors duration-500 bg-transparent placeholder-neutral-300"
         autoFocus
       />
       <button
         onClick={() => { setShow(false); setUrl(""); }}
-        className="text-[9px] text-neutral-200 hover:text-black transition-colors duration-500"
+        className="text-[9px] text-neutral-400 hover:text-black transition-colors duration-500"
       >
         X
       </button>
