@@ -11,7 +11,7 @@ interface HistoryItem {
 export default function HistoryGallery() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     getHistory().then(setHistory);
@@ -30,28 +30,22 @@ export default function HistoryGallery() {
   if (history.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="w-full h-px bg-neutral-200" />
+    <div>
       <button
-        onClick={() => setShowHistory(!showHistory)}
-        className="flex items-center justify-between w-full"
+        onClick={() => setOpen(!open)}
+        className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-200 hover:text-neutral-500 transition-colors duration-500"
       >
-        <span className="text-[10px] tracking-[0.15em] uppercase font-light text-neutral-400">
-          History ({history.length})
-        </span>
-        <span className="text-[10px] text-neutral-300">
-          {showHistory ? "\u2212" : "\u002B"}
-        </span>
+        {open ? "Close" : `History (${history.length})`}
       </button>
 
-      {showHistory && (
-        <div className="grid grid-cols-3 gap-1">
+      {open && (
+        <div className="grid grid-cols-3 gap-px mt-4">
           {history.map((item) => (
             <img
               key={item.id}
               src={item.resultImage}
-              alt="Try-on result"
-              className="w-full aspect-[3/4] object-cover cursor-pointer hover:opacity-70 transition-opacity duration-300"
+              alt=""
+              className="w-full aspect-[3/4] object-cover cursor-pointer hover:opacity-60 transition-opacity duration-300"
               onClick={() => setExpanded(expanded === item.id ? null : item.id)}
             />
           ))}
@@ -60,12 +54,12 @@ export default function HistoryGallery() {
 
       {expanded && (
         <div
-          className="fixed inset-0 bg-white/95 z-50 flex items-center justify-center p-6 cursor-pointer"
+          className="fixed inset-0 bg-white z-50 flex items-center justify-center p-8 cursor-pointer"
           onClick={() => setExpanded(null)}
         >
           <img
             src={history.find((h) => h.id === expanded)?.resultImage}
-            alt="Try-on result"
+            alt=""
             className="max-w-full max-h-full"
           />
         </div>

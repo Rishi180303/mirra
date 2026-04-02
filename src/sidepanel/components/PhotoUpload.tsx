@@ -28,41 +28,38 @@ export default function PhotoUpload({ personImage, onImageChange }: Props) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <span className="text-[10px] tracking-[0.15em] uppercase font-light text-neutral-400">
-        Your Photo
-      </span>
+    <div>
       {personImage ? (
         <div>
           <img
             src={personImage}
-            alt="Your photo"
-            className="w-full max-h-56 object-contain"
+            alt="You"
+            className="w-full max-h-60 object-contain"
           />
-          <div className="flex gap-4 mt-3">
+          <div className="flex gap-6 mt-4">
             <button
               onClick={() => fileRef.current?.click()}
-              className="text-[10px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-300 underline underline-offset-4"
+              className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-300 hover:text-black transition-colors duration-500"
             >
               Change
             </button>
             <button
               onClick={handleRemove}
-              className="text-[10px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-300 underline underline-offset-4"
+              className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-300 hover:text-black transition-colors duration-500"
             >
               Remove
             </button>
           </div>
         </div>
       ) : (
-        <button
+        <div
           onClick={() => fileRef.current?.click()}
-          className="w-full border border-neutral-200 py-10 text-center hover:border-black transition-colors duration-300 cursor-pointer"
+          className="py-16 text-center cursor-pointer group"
         >
-          <div className="text-[10px] tracking-[0.15em] uppercase font-light text-neutral-400">
-            Upload full-body photo
-          </div>
-        </button>
+          <span className="text-[9px] tracking-[0.15em] uppercase font-light text-neutral-300 group-hover:text-neutral-500 transition-colors duration-500">
+            Upload photo
+          </span>
+        </div>
       )}
       <input
         ref={fileRef}

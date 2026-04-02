@@ -76,68 +76,60 @@ export default function App() {
   };
 
   return (
-    <div className="px-6 py-8 flex flex-col gap-8">
+    <div className="px-7 py-10 flex flex-col gap-10">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1
-          className="text-xs font-medium tracking-[0.3em] uppercase"
-          style={{ color: "#111" }}
-        >
+      <div className="flex items-baseline justify-between">
+        <span className="text-[11px] font-normal tracking-[0.35em] uppercase">
           Mirra
-        </h1>
+        </span>
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className="text-[10px] tracking-[0.15em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-300"
+          className="text-[9px] tracking-[0.12em] uppercase font-light text-neutral-300 hover:text-neutral-600 transition-colors duration-500"
         >
           {showSettings ? "Close" : "Settings"}
         </button>
       </div>
 
-      {/* Divider */}
-      <div className="w-full h-px bg-neutral-200" />
-
       {/* Settings */}
       {showSettings && (
-        <div className="flex flex-col gap-3">
-          <span className="text-[10px] tracking-[0.15em] uppercase font-light text-neutral-400">
-            Speed
-          </span>
-          <div className="flex gap-px">
+        <>
+          <div className="flex gap-0">
             {(["performance", "balanced", "quality"] as SpeedMode[]).map((mode) => (
               <button
                 key={mode}
                 onClick={() => handleSpeedModeChange(mode)}
-                className={`flex-1 text-[10px] tracking-[0.1em] uppercase py-2.5 transition-colors duration-300 border ${
+                className={`flex-1 text-[9px] tracking-[0.08em] uppercase py-2 transition-all duration-500 ${
                   speedMode === mode
-                    ? "bg-black text-white border-black"
-                    : "bg-white text-neutral-500 border-neutral-200 hover:border-black hover:text-black"
+                    ? "text-black"
+                    : "text-neutral-300 hover:text-neutral-500"
                 }`}
               >
                 {mode === "performance" ? "Fast" : mode === "balanced" ? "Balanced" : "Quality"}
               </button>
             ))}
           </div>
-          <div className="w-full h-px bg-neutral-200 mt-2" />
-        </div>
+          <div className="w-full h-px bg-neutral-100" />
+        </>
       )}
 
-      {/* Photo */}
+      {/* Photo + Garment */}
       <PhotoUpload personImage={personImage} onImageChange={setPersonImage} />
-
-      {/* Garment */}
       <GarmentPreview garment={garment} />
 
-      {/* Manual Input */}
-      <ManualGarmentInput />
-
-      {/* Try On Button */}
-      <button
-        onClick={handleTryOn}
-        disabled={loading || !personImage || !garment}
-        className="w-full py-3.5 text-[11px] tracking-[0.2em] uppercase font-medium transition-all duration-300 disabled:opacity-20 disabled:cursor-not-allowed bg-black text-white hover:bg-neutral-800"
-      >
-        {loading ? "Generating..." : "Try It On"}
-      </button>
+      {/* Action */}
+      {(personImage || garment) && (
+        <button
+          onClick={handleTryOn}
+          disabled={loading || !personImage || !garment}
+          className={`w-full py-3 text-[10px] tracking-[0.2em] uppercase transition-all duration-500 ${
+            loading || !personImage || !garment
+              ? "text-neutral-200 cursor-default"
+              : "text-black hover:tracking-[0.3em]"
+          }`}
+        >
+          {loading ? "Generating..." : "Try it on"}
+        </button>
+      )}
 
       {/* Status */}
       <StatusBar loading={loading} error={error} />
@@ -145,8 +137,11 @@ export default function App() {
       {/* Result */}
       <TryOnResult resultImage={resultImage} />
 
-      {/* History */}
-      <HistoryGallery />
+      {/* Manual + History at bottom */}
+      <div className="mt-auto flex flex-col gap-6">
+        <ManualGarmentInput />
+        <HistoryGallery />
+      </div>
     </div>
   );
 }
