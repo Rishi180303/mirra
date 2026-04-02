@@ -1,8 +1,9 @@
 import { MSG } from "../shared/messages";
-import { getApiKey, getSpeedMode, setCurrentGarment, addToHistory } from "../shared/storage";
+import { getSpeedMode, setCurrentGarment, addToHistory } from "../shared/storage";
 import type { FashnRunResponse, FashnStatusResponse } from "../shared/types";
 
 const FASHN_API_URL = "https://api.fashn.ai/v1";
+const API_KEY = import.meta.env.VITE_FASHN_API_KEY as string;
 
 // Open side panel when extension icon is clicked
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
@@ -32,9 +33,9 @@ async function handleTryOn(
   const startTime = Date.now();
 
   try {
-    const apiKey = await getApiKey();
+    const apiKey = API_KEY;
     if (!apiKey) {
-      sendToSidePanel({ type: MSG.TRY_ON_ERROR, payload: { error: "API key not set" } });
+      sendToSidePanel({ type: MSG.TRY_ON_ERROR, payload: { error: "API key not set — add VITE_FASHN_API_KEY to .env" } });
       return;
     }
 

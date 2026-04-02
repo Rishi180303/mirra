@@ -5,7 +5,7 @@ import TryOnResult from "./components/TryOnResult";
 import StatusBar from "./components/StatusBar";
 import HistoryGallery from "./components/HistoryGallery";
 import ManualGarmentInput from "./components/ManualGarmentInput";
-import { getPersonImage, getApiKey, setApiKey, getCurrentGarment, getSpeedMode, setSpeedMode } from "../shared/storage";
+import { getPersonImage, getCurrentGarment, getSpeedMode, setSpeedMode } from "../shared/storage";
 import type { SpeedMode } from "../shared/storage";
 import { MSG } from "../shared/messages";
 import type { GarmentInfo } from "../shared/types";
@@ -16,13 +16,11 @@ export default function App() {
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [apiKey, setApiKeyState] = useState<string>("");
   const [showSettings, setShowSettings] = useState(false);
   const [speedMode, setSpeedModeState] = useState<SpeedMode>("balanced");
 
   useEffect(() => {
     getPersonImage().then(setPersonImage);
-    getApiKey().then((key) => key && setApiKeyState(key));
     getCurrentGarment().then((g) => g && setGarment(g as GarmentInfo));
     getSpeedMode().then(setSpeedModeState);
 
@@ -57,11 +55,6 @@ export default function App() {
       setError("Select a garment from a product page");
       return;
     }
-    if (!apiKey) {
-      setError("Enter your FASHN API key in settings");
-      setShowSettings(true);
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -75,13 +68,6 @@ export default function App() {
         category: garment.category,
       },
     });
-  };
-
-  const handleSaveApiKey = async () => {
-    if (apiKey.trim()) {
-      await setApiKey(apiKey.trim());
-      setShowSettings(false);
-    }
   };
 
   const handleSpeedModeChange = async (mode: SpeedMode) => {
@@ -99,7 +85,7 @@ export default function App() {
     <div className="p-4 flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-white">Virtual Try-On</h1>
+        <h1 className="text-lg font-bold text-white">Mirra</h1>
         <button
           onClick={() => setShowSettings(!showSettings)}
           className="text-xs text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10"
@@ -108,55 +94,24 @@ export default function App() {
         </button>
       </div>
 
-      {/* Settings Panel */}
+      {/* Settings Panel — speed mode only */}
       {showSettings && (
-        <div className="bg-white/5 rounded-lg p-3 border border-white/10 flex flex-col gap-3">
-          {/* API Key */}
-          <div>
-            <label className="text-xs text-gray-400 block mb-1">FASHN API Key</label>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKeyState(e.target.value)}
-                placeholder="Enter your API key"
-                className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-sm text-white placeholder-gray-500 outline-none focus:border-indigo-500"
-              />
+        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+          <label className="text-xs text-gray-400 block mb-1">Generation Speed</label>
+          <div className="flex gap-1">
+            {(["performance", "balanced", "quality"] as SpeedMode[]).map((mode) => (
               <button
-                onClick={handleSaveApiKey}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1 rounded transition-colors"
+                key={mode}
+                onClick={() => handleSpeedModeChange(mode)}
+                className={`flex-1 text-xs py-1.5 rounded transition-colors ${
+                  speedMode === mode
+                    ? "bg-indigo-600 text-white"
+                    : "bg-white/10 text-gray-400 hover:text-white"
+                }`}
               >
-                Save
+                {speedLabels[mode]}
               </button>
-            </div>
-            <a
-              href="https://fashn.ai"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-indigo-400 hover:text-indigo-300 mt-1 inline-block"
-            >
-              Get an API key at fashn.ai
-            </a>
-          </div>
-
-          {/* Speed Mode */}
-          <div>
-            <label className="text-xs text-gray-400 block mb-1">Generation Speed</label>
-            <div className="flex gap-1">
-              {(["performance", "balanced", "quality"] as SpeedMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => handleSpeedModeChange(mode)}
-                  className={`flex-1 text-xs py-1.5 rounded transition-colors ${
-                    speedMode === mode
-                      ? "bg-indigo-600 text-white"
-                      : "bg-white/10 text-gray-400 hover:text-white"
-                  }`}
-                >
-                  {speedLabels[mode]}
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
         </div>
       )}
