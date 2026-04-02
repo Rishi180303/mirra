@@ -17,7 +17,6 @@ export default function HistoryGallery() {
     getHistory().then(setHistory);
   }, []);
 
-  // Refresh history when storage changes
   useEffect(() => {
     const listener = (changes: { [key: string]: chrome.storage.StorageChange }) => {
       if (changes.tryOnHistory) {
@@ -31,43 +30,43 @@ export default function HistoryGallery() {
   if (history.length === 0) return null;
 
   return (
-    <div className="bg-white/5 rounded-lg border border-white/10">
+    <div className="flex flex-col gap-3">
+      <div className="w-full h-px bg-neutral-200" />
       <button
         onClick={() => setShowHistory(!showHistory)}
-        className="w-full p-3 flex items-center justify-between text-xs text-gray-400 hover:text-white transition-colors"
+        className="flex items-center justify-between w-full"
       >
-        <span>History ({history.length})</span>
-        <span>{showHistory ? "\u25B2" : "\u25BC"}</span>
+        <span className="text-[10px] tracking-[0.15em] uppercase font-light text-neutral-400">
+          History ({history.length})
+        </span>
+        <span className="text-[10px] text-neutral-300">
+          {showHistory ? "\u2212" : "\u002B"}
+        </span>
       </button>
 
       {showHistory && (
-        <div className="px-3 pb-3 grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1">
           {history.map((item) => (
-            <div key={item.id} className="relative">
-              <img
-                src={item.resultImage}
-                alt="Try-on result"
-                className="w-full aspect-[3/4] object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => setExpanded(expanded === item.id ? null : item.id)}
-              />
-              <div className="text-[9px] text-gray-500 mt-0.5 truncate">
-                {new Date(item.timestamp).toLocaleDateString()}
-              </div>
-            </div>
+            <img
+              key={item.id}
+              src={item.resultImage}
+              alt="Try-on result"
+              className="w-full aspect-[3/4] object-cover cursor-pointer hover:opacity-70 transition-opacity duration-300"
+              onClick={() => setExpanded(expanded === item.id ? null : item.id)}
+            />
           ))}
         </div>
       )}
 
-      {/* Expanded view */}
       {expanded && (
         <div
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-white/95 z-50 flex items-center justify-center p-6 cursor-pointer"
           onClick={() => setExpanded(null)}
         >
           <img
             src={history.find((h) => h.id === expanded)?.resultImage}
             alt="Try-on result"
-            className="max-w-full max-h-full rounded-lg"
+            className="max-w-full max-h-full"
           />
         </div>
       )}

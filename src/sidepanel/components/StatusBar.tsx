@@ -6,16 +6,18 @@ interface Props {
 export default function StatusBar({ loading, error }: Props) {
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-xs text-indigo-300">
-        <div className="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
-        Generating your try-on... this takes ~5-8 seconds
+      <div className="flex items-center gap-3">
+        <div className="w-2.5 h-2.5 border border-black border-t-transparent rounded-full animate-spin" />
+        <span className="text-[10px] tracking-[0.1em] uppercase font-light text-neutral-400">
+          Generating...
+        </span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-xs text-red-400 bg-red-400/10 rounded p-2">
+      <div className="text-[10px] tracking-[0.05em] font-light text-red-500 border-l-2 border-red-500 pl-3 py-1">
         {error}
       </div>
     );

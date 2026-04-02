@@ -1,5 +1,6 @@
 import type { ExtractedGarment } from "./garment-extractor";
-import { MSG } from "../shared/messages";
+
+const GARMENT_DETECTED = "GARMENT_DETECTED";
 
 const INJECTED_ATTR = "data-vton-injected";
 
@@ -28,7 +29,7 @@ export function injectTryOnButton(garment: ExtractedGarment) {
     e.preventDefault();
     e.stopPropagation();
     chrome.runtime.sendMessage({
-      type: MSG.GARMENT_DETECTED,
+      type: GARMENT_DETECTED,
       payload: {
         imageUrl: garment.imageUrl,
         title: garment.title,

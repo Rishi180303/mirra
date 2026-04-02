@@ -24,9 +24,9 @@ export default function ManualGarmentInput() {
     return (
       <button
         onClick={() => setShow(true)}
-        className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+        className="text-[10px] tracking-[0.1em] uppercase font-light text-neutral-300 hover:text-black transition-colors duration-300 self-start"
       >
-        Or paste a garment image URL
+        Paste garment URL
       </button>
     );
   }
@@ -38,20 +38,20 @@ export default function ManualGarmentInput() {
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-        placeholder="Paste garment image URL..."
-        className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-xs text-white placeholder-gray-500 outline-none focus:border-indigo-500"
+        placeholder="Image URL"
+        className="flex-1 border-b border-neutral-200 focus:border-black outline-none text-[11px] font-light py-1.5 transition-colors duration-300 bg-transparent placeholder-neutral-300"
         autoFocus
       />
       <button
         onClick={handleSubmit}
         disabled={!url.trim()}
-        className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-700 text-white text-xs px-2 py-1 rounded transition-colors"
+        className="text-[10px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black disabled:text-neutral-200 transition-colors duration-300"
       >
         Use
       </button>
       <button
         onClick={() => setShow(false)}
-        className="text-xs text-gray-500 hover:text-gray-300 px-1"
+        className="text-[10px] text-neutral-300 hover:text-black transition-colors duration-300"
       >
         X
       </button>

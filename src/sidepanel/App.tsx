@@ -75,61 +75,66 @@ export default function App() {
     await setSpeedMode(mode);
   };
 
-  const speedLabels: Record<SpeedMode, string> = {
-    performance: "Fast (~5s)",
-    balanced: "Balanced (~8s)",
-    quality: "Quality (~15s)",
-  };
-
   return (
-    <div className="p-4 flex flex-col gap-4">
+    <div className="px-6 py-8 flex flex-col gap-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-white">Mirra</h1>
+        <h1
+          className="text-xs font-medium tracking-[0.3em] uppercase"
+          style={{ color: "#111" }}
+        >
+          Mirra
+        </h1>
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className="text-xs text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10"
+          className="text-[10px] tracking-[0.15em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-300"
         >
           {showSettings ? "Close" : "Settings"}
         </button>
       </div>
 
-      {/* Settings Panel — speed mode only */}
+      {/* Divider */}
+      <div className="w-full h-px bg-neutral-200" />
+
+      {/* Settings */}
       {showSettings && (
-        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-          <label className="text-xs text-gray-400 block mb-1">Generation Speed</label>
-          <div className="flex gap-1">
+        <div className="flex flex-col gap-3">
+          <span className="text-[10px] tracking-[0.15em] uppercase font-light text-neutral-400">
+            Speed
+          </span>
+          <div className="flex gap-px">
             {(["performance", "balanced", "quality"] as SpeedMode[]).map((mode) => (
               <button
                 key={mode}
                 onClick={() => handleSpeedModeChange(mode)}
-                className={`flex-1 text-xs py-1.5 rounded transition-colors ${
+                className={`flex-1 text-[10px] tracking-[0.1em] uppercase py-2.5 transition-colors duration-300 border ${
                   speedMode === mode
-                    ? "bg-indigo-600 text-white"
-                    : "bg-white/10 text-gray-400 hover:text-white"
+                    ? "bg-black text-white border-black"
+                    : "bg-white text-neutral-500 border-neutral-200 hover:border-black hover:text-black"
                 }`}
               >
-                {speedLabels[mode]}
+                {mode === "performance" ? "Fast" : mode === "balanced" ? "Balanced" : "Quality"}
               </button>
             ))}
           </div>
+          <div className="w-full h-px bg-neutral-200 mt-2" />
         </div>
       )}
 
-      {/* Your Photo */}
+      {/* Photo */}
       <PhotoUpload personImage={personImage} onImageChange={setPersonImage} />
 
-      {/* Selected Garment */}
+      {/* Garment */}
       <GarmentPreview garment={garment} />
 
-      {/* Manual Garment Input */}
+      {/* Manual Input */}
       <ManualGarmentInput />
 
-      {/* Generate Button */}
+      {/* Try On Button */}
       <button
         onClick={handleTryOn}
         disabled={loading || !personImage || !garment}
-        className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-700 disabled:text-gray-500 text-white font-medium py-3 rounded-lg transition-colors text-sm"
+        className="w-full py-3.5 text-[11px] tracking-[0.2em] uppercase font-medium transition-all duration-300 disabled:opacity-20 disabled:cursor-not-allowed bg-black text-white hover:bg-neutral-800"
       >
         {loading ? "Generating..." : "Try It On"}
       </button>

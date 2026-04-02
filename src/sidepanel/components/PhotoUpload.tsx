@@ -28,25 +28,27 @@ export default function PhotoUpload({ personImage, onImageChange }: Props) {
   };
 
   return (
-    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-      <label className="text-xs text-gray-400 block mb-2">Your Photo</label>
+    <div className="flex flex-col gap-3">
+      <span className="text-[10px] tracking-[0.15em] uppercase font-light text-neutral-400">
+        Your Photo
+      </span>
       {personImage ? (
-        <div className="relative">
+        <div>
           <img
             src={personImage}
             alt="Your photo"
-            className="w-full max-h-48 object-contain rounded"
+            className="w-full max-h-56 object-contain"
           />
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-4 mt-3">
             <button
               onClick={() => fileRef.current?.click()}
-              className="flex-1 text-xs text-gray-400 hover:text-white bg-white/10 rounded px-2 py-1 transition-colors"
+              className="text-[10px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-300 underline underline-offset-4"
             >
               Change
             </button>
             <button
               onClick={handleRemove}
-              className="text-xs text-red-400 hover:text-red-300 bg-white/10 rounded px-2 py-1 transition-colors"
+              className="text-[10px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-300 underline underline-offset-4"
             >
               Remove
             </button>
@@ -55,10 +57,11 @@ export default function PhotoUpload({ personImage, onImageChange }: Props) {
       ) : (
         <button
           onClick={() => fileRef.current?.click()}
-          className="w-full border-2 border-dashed border-white/20 rounded-lg p-6 text-center hover:border-indigo-500/50 transition-colors cursor-pointer"
+          className="w-full border border-neutral-200 py-10 text-center hover:border-black transition-colors duration-300 cursor-pointer"
         >
-          <div className="text-2xl mb-1">+</div>
-          <div className="text-xs text-gray-400">Upload a full-body photo</div>
+          <div className="text-[10px] tracking-[0.15em] uppercase font-light text-neutral-400">
+            Upload full-body photo
+          </div>
         </button>
       )}
       <input

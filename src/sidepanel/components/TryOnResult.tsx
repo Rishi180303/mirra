@@ -6,17 +6,20 @@ export default function TryOnResult({ resultImage }: Props) {
   if (!resultImage) return null;
 
   return (
-    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-      <label className="text-xs text-gray-400 block mb-2">Result</label>
+    <div className="flex flex-col gap-3">
+      <div className="w-full h-px bg-neutral-200" />
+      <span className="text-[10px] tracking-[0.15em] uppercase font-light text-neutral-400">
+        Result
+      </span>
       <img
         src={resultImage}
         alt="Try-on result"
-        className="w-full rounded"
+        className="w-full"
       />
       <a
         href={resultImage}
-        download="tryon-result.png"
-        className="block text-center text-xs text-indigo-400 hover:text-indigo-300 mt-2 transition-colors"
+        download="mirra-result.png"
+        className="text-[10px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-300 underline underline-offset-4 self-start"
       >
         Download
       </a>
