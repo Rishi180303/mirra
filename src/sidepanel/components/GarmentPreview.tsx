@@ -2,9 +2,10 @@ import type { GarmentInfo } from "../../shared/types";
 
 interface Props {
   garment: GarmentInfo | null;
+  onClear: () => void;
 }
 
-export default function GarmentPreview({ garment }: Props) {
+export default function GarmentPreview({ garment, onClear }: Props) {
   if (!garment) return null;
 
   return (
@@ -14,11 +15,19 @@ export default function GarmentPreview({ garment }: Props) {
         alt={garment.title || "Garment"}
         className="w-full max-h-60 object-contain"
       />
-      {garment.title && (
-        <p className="text-[10px] font-light text-neutral-400 mt-3 truncate">
-          {garment.title}
-        </p>
-      )}
+      <div className="flex gap-6 mt-3">
+        {garment.title && (
+          <p className="text-[10px] font-light text-neutral-400 truncate flex-1">
+            {garment.title}
+          </p>
+        )}
+        <button
+          onClick={onClear}
+          className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-500"
+        >
+          Clear
+        </button>
+      </div>
     </div>
   );
 }

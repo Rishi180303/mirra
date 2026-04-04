@@ -28,3 +28,21 @@ export interface TryOnHistoryItem {
   resultImage: string;
   timestamp: number;
 }
+
+export type TryOnProvider = "replicate" | "fashn";
+
+export type PoseType = "front" | "side" | "back";
+
+export interface BodyPhoto {
+  image: string; // base64 data URL
+  pose: PoseType;
+  keypoints: Array<{ x: number; y: number; score: number; name: string }>;
+  timestamp: number;
+}
+
+export interface ReplicatePrediction {
+  id: string;
+  status: "starting" | "processing" | "succeeded" | "failed" | "canceled";
+  output?: string | string[];
+  error?: string;
+}

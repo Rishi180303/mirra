@@ -32,6 +32,7 @@
   ],
   "host_permissions": [
     "https://api.fashn.ai/*",
+    "https://api.replicate.com/*",
     "<all_urls>"
   ],
   "icons": {

@@ -1,19 +1,18 @@
 import { useState } from "react";
+import type { GarmentInfo } from "../../shared/types";
 
-const GARMENT_DETECTED = "GARMENT_DETECTED";
+interface Props {
+  onGarmentSelected: (garment: GarmentInfo) => void;
+}
 
-export default function ManualGarmentInput() {
+export default function ManualGarmentInput({ onGarmentSelected }: Props) {
   const [url, setUrl] = useState("");
   const [show, setShow] = useState(false);
 
   const handleSubmit = () => {
     const trimmed = url.trim();
     if (!trimmed) return;
-
-    chrome.runtime.sendMessage({
-      type: GARMENT_DETECTED,
-      payload: { imageUrl: trimmed, title: "Manual" },
-    });
+    onGarmentSelected({ imageUrl: trimmed, title: "Manual input" });
     setUrl("");
     setShow(false);
   };
@@ -36,10 +35,16 @@ export default function ManualGarmentInput() {
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-        placeholder="Image URL"
+        placeholder="Paste garment image URL"
         className="flex-1 border-b border-neutral-200 focus:border-neutral-400 outline-none text-[10px] font-light py-1 transition-colors duration-500 bg-transparent placeholder-neutral-300"
         autoFocus
       />
+      <button
+        onClick={handleSubmit}
+        className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-500"
+      >
+        Go
+      </button>
       <button
         onClick={() => { setShow(false); setUrl(""); }}
         className="text-[9px] text-neutral-400 hover:text-black transition-colors duration-500"

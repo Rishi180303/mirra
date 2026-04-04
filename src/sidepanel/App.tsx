@@ -1,83 +1,125 @@
-import { useState, useEffect } from "react";
-import BodyViewer from "./components/BodyViewer";
-import MeasurementSetup from "./components/MeasurementSetup";
-import GarmentSizeInput from "./components/GarmentSizeInput";
-import FitSummary from "./components/FitSummary";
-import { getBodyMeasurements, analyzeFit } from "../shared/measurements";
-import type { BodyMeasurements, GarmentSize, FitResult } from "../shared/measurements";
-
-type View = "loading" | "setup" | "main";
+import { useState, useEffect, useCallback } from "react";
+import BodyProfile from "./components/BodyProfile";
+import GarmentPreview from "./components/GarmentPreview";
+import TryOnResult from "./components/TryOnResult";
+import StatusBar from "./components/StatusBar";
+import HistoryGallery from "./components/HistoryGallery";
+import ManualGarmentInput from "./components/ManualGarmentInput";
+import { getCurrentGarment } from "../shared/storage";
+import { getBestPhotoForCategory, getStoredPoses } from "../services/body-manager";
+import { MSG } from "../shared/messages";
+import type { GarmentInfo } from "../shared/types";
 
 export default function App() {
-  const [view, setView] = useState<View>("loading");
-  const [measurements, setMeasurements] = useState<BodyMeasurements | null>(null);
-  const [fitResults, setFitResults] = useState<FitResult[]>([]);
-  const [editing, setEditing] = useState(false);
+  const [hasPhotos, setHasPhotos] = useState(false);
+  const [garment, setGarment] = useState<GarmentInfo | null>(null);
+  const [resultImage, setResultImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    getBodyMeasurements().then((m) => {
-      if (m) {
-        setMeasurements(m);
-        setView("main");
-      } else {
-        setView("setup");
-      }
-    });
+  const refreshPhotoState = useCallback(async () => {
+    const poses = await getStoredPoses();
+    setHasPhotos(poses.length > 0);
   }, []);
 
-  const handleSetupComplete = (m: BodyMeasurements) => {
-    setMeasurements(m);
-    setEditing(false);
-    setView("main");
+  useEffect(() => {
+    refreshPhotoState();
+    getCurrentGarment().then((g) => g && setGarment(g as GarmentInfo));
+
+    const listener = (message: { type: string; payload?: unknown }) => {
+      if (message.type === MSG.GARMENT_DETECTED) {
+        const payload = message.payload as GarmentInfo;
+        setGarment(payload);
+        setResultImage(null);
+        setError(null);
+      }
+      if (message.type === MSG.TRY_ON_RESULT) {
+        const payload = message.payload as { resultImage: string };
+        setResultImage(payload.resultImage);
+        setLoading(false);
+      }
+      if (message.type === MSG.TRY_ON_ERROR) {
+        const payload = message.payload as { error: string };
+        setError(payload.error);
+        setLoading(false);
+      }
+    };
+    chrome.runtime.onMessage.addListener(listener);
+    return () => chrome.runtime.onMessage.removeListener(listener);
+  }, [refreshPhotoState]);
+
+  const handleTryOn = async () => {
+    if (!garment) {
+      setError("Select a garment from a product page");
+      return;
+    }
+
+    const bodyPhoto = await getBestPhotoForCategory(garment.category);
+    if (!bodyPhoto) {
+      setError("Upload a front photo first");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setResultImage(null);
+
+    chrome.runtime.sendMessage({
+      type: MSG.TRY_ON_REQUEST,
+      payload: {
+        personImage: bodyPhoto.image,
+        garmentImageUrl: garment.imageUrl,
+        category: garment.category,
+      },
+    });
   };
-
-  const handleGarmentSize = (garment: GarmentSize) => {
-    if (!measurements) return;
-    const results = analyzeFit(measurements, garment);
-    setFitResults(results);
-  };
-
-  if (view === "loading") return null;
-
-  if (view === "setup" || editing) {
-    return (
-      <div className="px-7 py-10">
-        <MeasurementSetup
-          onComplete={handleSetupComplete}
-          existing={measurements}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="px-7 py-10 flex flex-col gap-8">
       {/* Header */}
-      <div className="flex items-baseline justify-between">
-        <span className="text-[11px] font-normal tracking-[0.35em] uppercase">
-          Mirra
-        </span>
-        <button
-          onClick={() => setEditing(true)}
-          className="text-[9px] tracking-[0.12em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-500"
-        >
-          Edit body
-        </button>
-      </div>
+      <span className="text-[11px] font-normal tracking-[0.35em] uppercase">
+        Mirra
+      </span>
 
-      {/* 3D Body */}
-      {measurements && (
-        <BodyViewer measurements={measurements} fitResults={fitResults.length > 0 ? fitResults : undefined} />
+      {/* Body Photos */}
+      <BodyProfile onPhotosChange={refreshPhotoState} />
+
+      {/* Garment */}
+      <GarmentPreview garment={garment} onClear={() => {
+        setGarment(null);
+        chrome.storage.local.remove("currentGarment");
+      }} />
+
+      {/* Manual Input */}
+      <ManualGarmentInput onGarmentSelected={(g) => {
+        setGarment(g);
+        setResultImage(null);
+        setError(null);
+      }} />
+
+      {/* Try On Button */}
+      {(hasPhotos || garment) && (
+        <button
+          onClick={handleTryOn}
+          disabled={loading || !hasPhotos || !garment}
+          className={`w-full py-3 text-[10px] tracking-[0.2em] uppercase transition-all duration-500 ${
+            loading || !hasPhotos || !garment
+              ? "text-neutral-300 cursor-default"
+              : "text-black hover:tracking-[0.3em]"
+          }`}
+        >
+          {loading ? "Generating..." : "Try it on"}
+        </button>
       )}
 
-      {/* Fit Summary */}
-      <FitSummary results={fitResults} />
+      {/* Status */}
+      <StatusBar loading={loading} error={error} />
 
-      {/* Divider */}
-      <div className="w-full h-px bg-neutral-100" />
+      {/* Result */}
+      <TryOnResult resultImage={resultImage} />
 
-      {/* Garment Size Input */}
-      <GarmentSizeInput onSubmit={handleGarmentSize} />
+      {/* History */}
+      <HistoryGallery />
     </div>
   );
 }
