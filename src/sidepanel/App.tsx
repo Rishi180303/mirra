@@ -1,38 +1,20 @@
-import { useState, useEffect, useCallback } from "react";
-import BodyProfile from "./components/BodyProfile";
+import { useState, useEffect } from "react";
 import GarmentPreview from "./components/GarmentPreview";
 import TryOnResult from "./components/TryOnResult";
 import StatusBar from "./components/StatusBar";
 import HistoryGallery from "./components/HistoryGallery";
 import ManualGarmentInput from "./components/ManualGarmentInput";
-import { getCurrentGarment } from "../shared/storage";
-import { getBestPhotoForCategory, getStoredPoses } from "../services/body-manager";
 import { MSG } from "../shared/messages";
 import type { GarmentInfo } from "../shared/types";
 
 export default function App() {
-  const [hasPhotos, setHasPhotos] = useState(false);
   const [garment, setGarment] = useState<GarmentInfo | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refreshPhotoState = useCallback(async () => {
-    const poses = await getStoredPoses();
-    setHasPhotos(poses.length > 0);
-  }, []);
-
   useEffect(() => {
-    refreshPhotoState();
-    getCurrentGarment().then((g) => g && setGarment(g as GarmentInfo));
-
     const listener = (message: { type: string; payload?: unknown }) => {
-      if (message.type === MSG.GARMENT_DETECTED) {
-        const payload = message.payload as GarmentInfo;
-        setGarment(payload);
-        setResultImage(null);
-        setError(null);
-      }
       if (message.type === MSG.TRY_ON_RESULT) {
         const payload = message.payload as { resultImage: string };
         setResultImage(payload.resultImage);
@@ -46,29 +28,40 @@ export default function App() {
     };
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
-  }, [refreshPhotoState]);
+  }, []);
 
   const handleTryOn = async () => {
-    if (!garment) {
-      setError("Select a garment from a product page");
-      return;
-    }
-
-    const bodyPhoto = await getBestPhotoForCategory(garment.category);
-    if (!bodyPhoto) {
-      setError("Upload a front photo first");
-      return;
-    }
+    if (!garment) return;
 
     setLoading(true);
     setError(null);
     setResultImage(null);
 
+    // Convert garment image to base64 in the sidepanel (avoids CORS issues in background)
+    let garmentImageBase64: string | undefined;
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Failed to load garment image"));
+        img.src = garment.imageUrl;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0);
+      garmentImageBase64 = canvas.toDataURL("image/jpeg", 0.92);
+    } catch {
+      // If canvas approach fails (CORS), let background try fetching directly
+    }
+
     chrome.runtime.sendMessage({
       type: MSG.TRY_ON_REQUEST,
       payload: {
-        personImage: bodyPhoto.image,
         garmentImageUrl: garment.imageUrl,
+        garmentImageBase64,
         category: garment.category,
       },
     });
@@ -76,34 +69,41 @@ export default function App() {
 
   return (
     <div className="px-7 py-10 flex flex-col gap-8">
-      {/* Header */}
       <span className="text-[11px] font-normal tracking-[0.35em] uppercase">
         Mirra
       </span>
 
-      {/* Body Photos */}
-      <BodyProfile onPhotosChange={refreshPhotoState} />
+      <img
+        src="avatar.png"
+        alt="Your avatar"
+        className="w-full max-h-48 object-contain"
+      />
 
-      {/* Garment */}
-      <GarmentPreview garment={garment} onClear={() => {
-        setGarment(null);
-        chrome.storage.local.remove("currentGarment");
-      }} />
+      <GarmentPreview
+        garment={garment}
+        onGarmentDrop={(g) => {
+          setGarment(g);
+          setResultImage(null);
+          setError(null);
+        }}
+        onClear={() => setGarment(null)}
+        onCategoryChange={(category) => {
+          if (garment) setGarment({ ...garment, category });
+        }}
+      />
 
-      {/* Manual Input */}
       <ManualGarmentInput onGarmentSelected={(g) => {
         setGarment(g);
         setResultImage(null);
         setError(null);
       }} />
 
-      {/* Try On Button */}
-      {(hasPhotos || garment) && (
+      {garment && (
         <button
           onClick={handleTryOn}
-          disabled={loading || !hasPhotos || !garment}
+          disabled={loading}
           className={`w-full py-3 text-[10px] tracking-[0.2em] uppercase transition-all duration-500 ${
-            loading || !hasPhotos || !garment
+            loading
               ? "text-neutral-300 cursor-default"
               : "text-black hover:tracking-[0.3em]"
           }`}
@@ -112,13 +112,8 @@ export default function App() {
         </button>
       )}
 
-      {/* Status */}
       <StatusBar loading={loading} error={error} />
-
-      {/* Result */}
       <TryOnResult resultImage={resultImage} />
-
-      {/* History */}
       <HistoryGallery />
     </div>
   );

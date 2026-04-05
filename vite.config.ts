@@ -13,17 +13,12 @@ export default defineConfig(({ mode }) => {
         targets: [
           { src: "public/manifest.json", dest: "." },
           { src: "public/icons/*", dest: "icons" },
+          { src: "public/avatar.png", dest: "." },
         ],
       }),
     ],
     define: {
-      "import.meta.env.VITE_FASHN_API_KEY": JSON.stringify(env.VITE_FASHN_API_KEY || ""),
-      "import.meta.env.VITE_REPLICATE_API_TOKEN": JSON.stringify(env.VITE_REPLICATE_API_TOKEN || ""),
-    },
-    resolve: {
-      alias: {
-        "@mediapipe/pose": resolve(__dirname, "src/shims/mediapipe-pose.ts"),
-      },
+      "import.meta.env.VITE_GEMINI_API_KEY": JSON.stringify(env.VITE_GEMINI_API_KEY || ""),
     },
     base: "",
     build: {
@@ -33,7 +28,6 @@ export default defineConfig(({ mode }) => {
         input: {
           sidepanel: resolve(__dirname, "sidepanel.html"),
           background: resolve(__dirname, "src/background/background.ts"),
-          content: resolve(__dirname, "src/content/content.ts"),
         },
         output: {
           entryFileNames: "[name].js",

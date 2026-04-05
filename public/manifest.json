@@ -1,18 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "Virtual Try-On",
-  "version": "0.1.0",
-  "description": "Try on clothes from any product page using AI",
+  "name": "Mirra",
+  "version": "0.2.0",
+  "description": "AI-powered virtual try-on",
   "permissions": [
     "sidePanel",
-    "storage",
-    "activeTab"
+    "storage"
   ],
   "side_panel": {
     "default_path": "sidepanel.html"
   },
   "action": {
-    "default_title": "Virtual Try-On",
+    "default_title": "Mirra",
     "default_icon": {
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png",
@@ -23,17 +22,8 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["content.css"]
-    }
-  ],
   "host_permissions": [
-    "https://api.fashn.ai/*",
-    "https://api.replicate.com/*",
-    "<all_urls>"
+    "https://generativelanguage.googleapis.com/*"
   ],
   "icons": {
     "16": "icons/icon-16.png",
