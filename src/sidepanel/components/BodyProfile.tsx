@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import type { PoseType, BodyPhoto } from "../../shared/types";
+import type { BodyPhoto } from "../../shared/types";
 import {
   getAllPhotos,
   saveBodyPhoto,
@@ -11,150 +11,90 @@ interface Props {
   onPhotosChange: () => void;
 }
 
-const POSES: { key: PoseType; label: string }[] = [
-  { key: "front", label: "Front" },
-  { key: "side", label: "Side" },
-  { key: "back", label: "Back" },
-];
-
 export default function BodyProfile({ onPhotosChange }: Props) {
-  const [photos, setPhotos] = useState<Record<PoseType, BodyPhoto | null>>({
-    front: null,
-    side: null,
-    back: null,
-  });
-  const [loading, setLoading] = useState<PoseType | null>(null);
-  const [mismatch, setMismatch] = useState<{
-    targetPose: PoseType;
-    detectedPose: PoseType;
-    imageBase64: string;
-  } | null>(null);
-  const fileRefs = useRef<Record<PoseType, HTMLInputElement | null>>({
-    front: null,
-    side: null,
-    back: null,
-  });
+  const [photo, setPhoto] = useState<BodyPhoto | null>(null);
+  const [loading, setLoading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     migrateFromChromeStorage().then(() => {
-      getAllPhotos().then(setPhotos);
+      getAllPhotos().then((photos) => setPhoto(photos.front));
     });
   }, []);
 
-  const handleFile = async (pose: PoseType, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setLoading(pose);
-    setMismatch(null);
+    setLoading(true);
 
     const reader = new FileReader();
     reader.onload = async () => {
       const base64 = reader.result as string;
 
       try {
-        const result = await saveBodyPhoto(base64, pose);
-
-        if (result.detectedPose && result.detectedPose !== pose) {
-          setMismatch({
-            targetPose: pose,
-            detectedPose: result.detectedPose,
-            imageBase64: base64,
-          });
-        }
-
+        await saveBodyPhoto(base64, "front");
         const updated = await getAllPhotos();
-        setPhotos(updated);
+        setPhoto(updated.front);
         onPhotosChange();
       } catch {
         // Save failed silently
       }
 
-      setLoading(null);
+      setLoading(false);
     };
     reader.readAsDataURL(file);
 
     e.target.value = "";
   };
 
-  const handleMismatchAccept = async () => {
-    if (!mismatch) return;
-    await deleteBodyPhoto(mismatch.targetPose);
-    await saveBodyPhoto(mismatch.imageBase64, mismatch.detectedPose);
-    const updated = await getAllPhotos();
-    setPhotos(updated);
-    setMismatch(null);
-    onPhotosChange();
-  };
-
-  const handleDelete = async (pose: PoseType) => {
-    await deleteBodyPhoto(pose);
-    const updated = await getAllPhotos();
-    setPhotos(updated);
+  const handleDelete = async () => {
+    await deleteBodyPhoto("front");
+    setPhoto(null);
     onPhotosChange();
   };
 
   return (
     <div>
-      <div className="flex gap-4">
-        {POSES.map(({ key, label }) => (
-          <div key={key} className="flex-1 flex flex-col items-center gap-2">
-            <span className="text-[8px] tracking-[0.15em] uppercase font-light text-neutral-400">
-              {label}
-            </span>
-
-            {photos[key] ? (
-              <div className="relative group w-full">
-                <img
-                  src={photos[key]!.image}
-                  alt={label}
-                  className="w-full aspect-[3/4] object-cover"
-                />
-                <button
-                  onClick={() => handleDelete(key)}
-                  className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-[8px] text-neutral-400 hover:text-black transition-all duration-300"
-                >
-                  X
-                </button>
-              </div>
-            ) : (
-              <div
-                onClick={() => fileRefs.current[key]?.click()}
-                className={`w-full aspect-[3/4] flex items-center justify-center cursor-pointer border border-dashed border-neutral-200 hover:border-neutral-400 transition-colors duration-500 ${
-                  loading === key ? "animate-pulse" : ""
-                }`}
-              >
-                <span className="text-[9px] text-neutral-300">
-                  {loading === key ? "..." : "+"}
-                </span>
-              </div>
-            )}
-
-            <input
-              ref={(el) => { fileRefs.current[key] = el; }}
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleFile(key, e)}
-              className="hidden"
-            />
+      {photo ? (
+        <div>
+          <img
+            src={photo.image}
+            alt="You"
+            className="w-full max-h-96 object-contain"
+          />
+          <div className="flex gap-6 mt-4">
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-500"
+            >
+              Change
+            </button>
+            <button
+              onClick={handleDelete}
+              className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-500"
+            >
+              Remove
+            </button>
           </div>
-        ))}
-      </div>
-
-      {mismatch && (
-        <div className="mt-3 text-[9px] font-light text-neutral-500">
-          <span>
-            This looks like a {mismatch.detectedPose} view —{" "}
+        </div>
+      ) : (
+        <div
+          onClick={() => fileRef.current?.click()}
+          className={`py-16 text-center cursor-pointer group ${loading ? "animate-pulse" : ""}`}
+        >
+          <span className="text-[9px] tracking-[0.15em] uppercase font-light text-neutral-400 group-hover:text-neutral-500 transition-colors duration-500">
+            {loading ? "Processing..." : "Upload photo"}
           </span>
-          <button
-            onClick={handleMismatchAccept}
-            className="underline hover:text-black transition-colors duration-300"
-          >
-            save as {mismatch.detectedPose}
-          </button>
-          <span> instead?</span>
         </div>
       )}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFile}
+        className="hidden"
+      />
     </div>
   );
 }
