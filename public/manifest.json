@@ -5,7 +5,8 @@
   "description": "AI-powered virtual try-on",
   "permissions": [
     "sidePanel",
-    "storage"
+    "storage",
+    "unlimitedStorage"
   ],
   "side_panel": {
     "default_path": "sidepanel.html"
@@ -23,7 +24,8 @@
     "type": "module"
   },
   "host_permissions": [
-    "https://generativelanguage.googleapis.com/*"
+    "https://generativelanguage.googleapis.com/*",
+    "<all_urls>"
   ],
   "icons": {
     "16": "icons/icon-16.png",
