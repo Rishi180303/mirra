@@ -4,9 +4,7 @@
   "version": "0.2.0",
   "description": "AI-powered virtual try-on",
   "permissions": [
-    "sidePanel",
-    "storage",
-    "unlimitedStorage"
+    "sidePanel"
   ],
   "side_panel": {
     "default_path": "sidepanel.html"

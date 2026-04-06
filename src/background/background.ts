@@ -1,5 +1,4 @@
 import { MSG } from "../shared/messages";
-import { addToHistory } from "../shared/storage";
 import { geminiTryOn } from "./gemini-provider";
 import type { TryOnRequest } from "../shared/types";
 
@@ -15,7 +14,6 @@ chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
 async function handleTryOn(payload: TryOnRequest) {
   try {
     const result = await geminiTryOn(payload);
-    await addToHistory({ garmentUrl: payload.garmentImageUrl, resultImage: result.resultImage });
     sendToSidePanel({
       type: MSG.TRY_ON_RESULT,
       payload: { resultImage: result.resultImage, processingTime: result.processingTime },

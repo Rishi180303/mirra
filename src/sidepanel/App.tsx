@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
 import GarmentPreview from "./components/GarmentPreview";
-import TryOnResult from "./components/TryOnResult";
-import StatusBar from "./components/StatusBar";
-import HistoryGallery from "./components/HistoryGallery";
-import ManualGarmentInput from "./components/ManualGarmentInput";
 import { MSG } from "../shared/messages";
 import type { GarmentInfo } from "../shared/types";
 
@@ -35,9 +31,7 @@ export default function App() {
 
     setLoading(true);
     setError(null);
-    setResultImage(null);
 
-    // Convert garment image to base64 in the sidepanel (avoids CORS issues in background)
     let garmentImageBase64: string | undefined;
     try {
       const img = new Image();
@@ -54,7 +48,7 @@ export default function App() {
       ctx.drawImage(img, 0, 0);
       garmentImageBase64 = canvas.toDataURL("image/jpeg", 0.92);
     } catch {
-      // If canvas approach fails (CORS), let background try fetching directly
+      // fallback: let background fetch directly
     }
 
     chrome.runtime.sendMessage({
@@ -67,37 +61,77 @@ export default function App() {
     });
   };
 
+  const displayImage = resultImage || "avatar.png";
+
   return (
-    <div className="px-7 py-10 flex flex-col gap-8">
-      <span className="text-[11px] font-normal tracking-[0.35em] uppercase">
+    <div className="px-6 py-8 flex flex-col items-center gap-6">
+      {/* Header */}
+      <span className="text-[11px] font-normal tracking-[0.35em] uppercase self-start">
         Mirra
       </span>
 
-      <img
-        src="avatar.png"
-        alt="Your avatar"
-        className="w-full max-h-48 object-contain"
-      />
+      {/* Main image — avatar swaps to result in-place */}
+      <div className="relative w-full flex justify-center">
+        <img
+          src={displayImage}
+          alt="Avatar"
+          className={`max-w-full object-contain transition-opacity duration-500 ${loading ? "opacity-40" : "opacity-100"}`}
+        />
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-[9px] tracking-[0.15em] uppercase font-light text-black animate-pulse">
+              Generating
+            </span>
+          </div>
+        )}
+      </div>
 
-      <GarmentPreview
-        garment={garment}
-        onGarmentDrop={(g) => {
-          setGarment(g);
-          setResultImage(null);
-          setError(null);
-        }}
-        onClear={() => setGarment(null)}
-        onCategoryChange={(category) => {
-          if (garment) setGarment({ ...garment, category });
-        }}
-      />
+      {/* Result actions */}
+      {resultImage && !loading && (
+        <div className="flex gap-4 self-start">
+          <a
+            href={resultImage}
+            download="mirra-result.png"
+            className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-500"
+          >
+            Save
+          </a>
+          <button
+            onClick={() => setResultImage(null)}
+            className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-500"
+          >
+            Reset
+          </button>
+        </div>
+      )}
 
-      <ManualGarmentInput onGarmentSelected={(g) => {
-        setGarment(g);
-        setResultImage(null);
-        setError(null);
-      }} />
+      {/* Error */}
+      {error && (
+        <span className="text-[9px] tracking-[0.05em] font-light text-red-400 self-start">
+          {error}
+        </span>
+      )}
 
+      {/* Garment drop zone + preview */}
+      <div className="w-full">
+        <GarmentPreview
+          garment={garment}
+          onGarmentDrop={(g) => {
+            setGarment(g);
+            setResultImage(null);
+            setError(null);
+          }}
+          onClear={() => {
+            setGarment(null);
+            setResultImage(null);
+          }}
+          onCategoryChange={(category) => {
+            if (garment) setGarment({ ...garment, category });
+          }}
+        />
+      </div>
+
+      {/* Try On button */}
       {garment && (
         <button
           onClick={handleTryOn}
@@ -111,10 +145,6 @@ export default function App() {
           {loading ? "Generating..." : "Try it on"}
         </button>
       )}
-
-      <StatusBar loading={loading} error={error} />
-      <TryOnResult resultImage={resultImage} />
-      <HistoryGallery />
     </div>
   );
 }
