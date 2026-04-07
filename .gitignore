@@ -12,3 +12,8 @@ dist/
 .claude/
 docs/
 public/avatar.png
+server/models/
+server/training/data/
+server/venv/
+__pycache__/
+*.pyc

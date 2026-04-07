@@ -39,6 +39,27 @@ async function fetchImageAsBase64(url: string): Promise<{ mimeType: string; data
   return { mimeType: blob.type || "image/jpeg", data: btoa(binary) };
 }
 
+const SEGMENT_URL = "http://localhost:8000/segment";
+
+async function trySegment(
+  garment: { mimeType: string; data: string }
+): Promise<{ mimeType: string; data: string } | null> {
+  try {
+    const dataUrl = `data:${garment.mimeType};base64,${garment.data}`;
+    const res = await fetch(SEGMENT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: dataUrl }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return stripDataUrlPrefix(json.image);
+  } catch {
+    // Server not running — fall back to raw image
+    return null;
+  }
+}
+
 export async function geminiTryOn(payload: {
   garmentImageUrl: string;
   garmentImageBase64?: string;
@@ -57,7 +78,10 @@ export async function geminiTryOn(payload: {
 
   // Use pre-converted base64 from sidepanel if available
   const garmentSource = payload.garmentImageBase64 || payload.garmentImageUrl;
-  const garment = await fetchImageAsBase64(garmentSource);
+  let garment = await fetchImageAsBase64(garmentSource);
+
+  // Try segmentation server for cleaner garment image
+  garment = await trySegment(garment) || garment;
 
   const response = await fetch(`${GEMINI_API_URL}/${MODEL}:generateContent?key=${API_KEY}`, {
     method: "POST",
