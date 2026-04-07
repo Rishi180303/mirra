@@ -6,8 +6,10 @@ body {
   font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   background: #ffffff;
   color: #111111;
-  width: 400px;
+  width: 100%;
+  max-width: 400px;
   min-height: 100vh;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 

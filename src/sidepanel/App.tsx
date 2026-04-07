@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
-import GarmentPreview from "./components/GarmentPreview";
+import CollectionGrid from "./components/CollectionGrid";
+import Carousel from "./components/Carousel";
 import { MSG } from "../shared/messages";
-import type { GarmentInfo } from "../shared/types";
+
+type Page = "collection" | "dressing-room";
 
 export default function App() {
-  const [garment, setGarment] = useState<GarmentInfo | null>(null);
+  const [page, setPage] = useState<Page>("collection");
+  const [items, setItems] = useState<string[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,8 +30,32 @@ export default function App() {
     return () => chrome.runtime.onMessage.removeListener(listener);
   }, []);
 
-  const handleTryOn = async () => {
-    if (!garment) return;
+  const handleAddItem = (url: string) => {
+    if (items.length >= 4) return;
+    setItems([...items, url]);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const handleTryOn = () => {
+    setPage("dressing-room");
+    setSelectedIndex(0);
+    setResultImage(null);
+    setError(null);
+  };
+
+  const handleBack = () => {
+    setPage("collection");
+    setResultImage(null);
+    setError(null);
+    setLoading(false);
+  };
+
+  const handleWear = async () => {
+    const garmentUrl = items[selectedIndex];
+    if (!garmentUrl) return;
 
     setLoading(true);
     setError(null);
@@ -39,7 +67,7 @@ export default function App() {
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
         img.onerror = () => reject(new Error("Failed to load garment image"));
-        img.src = garment.imageUrl;
+        img.src = garmentUrl;
       });
       const canvas = document.createElement("canvas");
       canvas.width = img.naturalWidth;
@@ -54,24 +82,62 @@ export default function App() {
     chrome.runtime.sendMessage({
       type: MSG.TRY_ON_REQUEST,
       payload: {
-        garmentImageUrl: garment.imageUrl,
+        garmentImageUrl: garmentUrl,
         garmentImageBase64,
-        category: garment.category,
       },
     });
   };
 
   const displayImage = resultImage || "avatar.png";
 
-  return (
-    <div className="px-6 py-8 flex flex-col items-center gap-6">
-      {/* Header */}
-      <span className="text-[11px] font-normal tracking-[0.35em] uppercase self-start">
-        Mirra
-      </span>
+  // ── Collection page ──
+  if (page === "collection") {
+    return (
+      <div className="px-6 py-8 flex flex-col gap-6">
+        <span className="text-[11px] font-normal tracking-[0.35em] uppercase">
+          Mirra
+        </span>
 
-      {/* Main image — avatar swaps to result in-place */}
-      <div className="relative w-full flex justify-center">
+        <span className="text-[9px] tracking-[0.15em] uppercase font-light text-neutral-400">
+          Pick your pieces
+        </span>
+
+        <CollectionGrid
+          items={items}
+          onAdd={handleAddItem}
+          onRemove={handleRemoveItem}
+        />
+
+        {items.length > 0 && (
+          <button
+            onClick={handleTryOn}
+            className="w-full py-3 text-[10px] tracking-[0.2em] uppercase text-black hover:tracking-[0.3em] transition-all duration-500"
+          >
+            Try them on
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // ── Dressing room page ──
+  return (
+    <div className="px-6 py-8 flex flex-col gap-6">
+      {/* Header with back */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleBack}
+          className="text-[14px] font-light text-neutral-400 hover:text-black transition-colors duration-300"
+        >
+          &larr;
+        </button>
+        <span className="text-[11px] font-normal tracking-[0.35em] uppercase">
+          Mirra
+        </span>
+      </div>
+
+      {/* Avatar / result */}
+      <div className="relative flex justify-center">
         <img
           src={displayImage}
           alt="Avatar"
@@ -88,7 +154,7 @@ export default function App() {
 
       {/* Result actions */}
       {resultImage && !loading && (
-        <div className="flex gap-4 self-start">
+        <div className="flex gap-4">
           <a
             href={resultImage}
             download="mirra-result.png"
@@ -107,44 +173,34 @@ export default function App() {
 
       {/* Error */}
       {error && (
-        <span className="text-[9px] tracking-[0.05em] font-light text-red-400 self-start">
+        <span className="text-[9px] tracking-[0.05em] font-light text-red-400">
           {error}
         </span>
       )}
 
-      {/* Garment drop zone + preview */}
-      <div className="w-full">
-        <GarmentPreview
-          garment={garment}
-          onGarmentDrop={(g) => {
-            setGarment(g);
-            setResultImage(null);
-            setError(null);
-          }}
-          onClear={() => {
-            setGarment(null);
-            setResultImage(null);
-          }}
-          onCategoryChange={(category) => {
-            if (garment) setGarment({ ...garment, category });
-          }}
-        />
-      </div>
+      {/* Carousel */}
+      <Carousel
+        items={items}
+        selectedIndex={selectedIndex}
+        onSelect={(i) => {
+          setSelectedIndex(i);
+          setResultImage(null);
+          setError(null);
+        }}
+      />
 
-      {/* Try On button */}
-      {garment && (
-        <button
-          onClick={handleTryOn}
-          disabled={loading}
-          className={`w-full py-3 text-[10px] tracking-[0.2em] uppercase transition-all duration-500 ${
-            loading
-              ? "text-neutral-300 cursor-default"
-              : "text-black hover:tracking-[0.3em]"
-          }`}
-        >
-          {loading ? "Generating..." : "Try it on"}
-        </button>
-      )}
+      {/* Wear it button */}
+      <button
+        onClick={handleWear}
+        disabled={loading}
+        className={`w-full py-3 text-[10px] tracking-[0.2em] uppercase transition-all duration-500 ${
+          loading
+            ? "text-neutral-300 cursor-default"
+            : "text-black hover:tracking-[0.3em]"
+        }`}
+      >
+        {loading ? "Generating..." : "Wear it"}
+      </button>
     </div>
   );
 }
