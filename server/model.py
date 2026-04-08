@@ -1,246 +1,201 @@
-"""U2Net architecture for salient object detection / garment segmentation."""
+"""U2Net architecture — original implementation from xuebinqin/U-2-Net.
+
+Compatible with pretrained weights from:
+https://github.com/xuebinqin/U-2-Net
+"""
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 
-class ConvBnRelu(nn.Module):
-    def __init__(self, in_ch: int, out_ch: int, dilation: int = 1):
-        super().__init__()
-        self.conv = nn.Conv2d(in_ch, out_ch, 3, padding=dilation, dilation=dilation)
-        self.bn = nn.BatchNorm2d(out_ch)
+class REBNCONV(nn.Module):
+    def __init__(self, in_ch=3, out_ch=3, dirate=1):
+        super(REBNCONV, self).__init__()
+        self.conv_s1 = nn.Conv2d(in_ch, out_ch, 3, padding=1 * dirate, dilation=1 * dirate)
+        self.bn_s1 = nn.BatchNorm2d(out_ch)
+        self.relu_s1 = nn.ReLU(inplace=True)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return F.relu(self.bn(self.conv(x)))
+    def forward(self, x):
+        return self.relu_s1(self.bn_s1(self.conv_s1(x)))
+
+
+def _upsample_like(src, tar):
+    return F.interpolate(src, size=tar.shape[2:], mode="bilinear", align_corners=False)
 
 
 class RSU7(nn.Module):
-    """Residual U-block with 7 levels."""
-
-    def __init__(self, in_ch: int, mid_ch: int, out_ch: int):
-        super().__init__()
-        self.conv_in = ConvBnRelu(in_ch, out_ch)
-
-        self.enc1 = ConvBnRelu(out_ch, mid_ch)
+    def __init__(self, in_ch=3, mid_ch=12, out_ch=3):
+        super(RSU7, self).__init__()
+        self.rebnconvin = REBNCONV(in_ch, out_ch, dirate=1)
+        self.rebnconv1 = REBNCONV(out_ch, mid_ch, dirate=1)
         self.pool1 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc2 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv2 = REBNCONV(mid_ch, mid_ch, dirate=1)
         self.pool2 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc3 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv3 = REBNCONV(mid_ch, mid_ch, dirate=1)
         self.pool3 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc4 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv4 = REBNCONV(mid_ch, mid_ch, dirate=1)
         self.pool4 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc5 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv5 = REBNCONV(mid_ch, mid_ch, dirate=1)
         self.pool5 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc6 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv6 = REBNCONV(mid_ch, mid_ch, dirate=1)
+        self.rebnconv7 = REBNCONV(mid_ch, mid_ch, dirate=2)
+        self.rebnconv6d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv5d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv4d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv3d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv2d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv1d = REBNCONV(mid_ch * 2, out_ch, dirate=1)
 
-        self.bottleneck = ConvBnRelu(mid_ch, mid_ch, dilation=2)
-
-        self.dec6 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec5 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec4 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec3 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec2 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec1 = ConvBnRelu(mid_ch * 2, out_ch)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x_in = self.conv_in(x)
-
-        e1 = self.enc1(x_in)
-        e2 = self.enc2(self.pool1(e1))
-        e3 = self.enc3(self.pool2(e2))
-        e4 = self.enc4(self.pool3(e3))
-        e5 = self.enc5(self.pool4(e4))
-        e6 = self.enc6(self.pool5(e5))
-
-        b = self.bottleneck(e6)
-
-        d6 = self.dec6(torch.cat([b, e6], dim=1))
-        d5 = self.dec5(torch.cat([_upsample_like(d6, e5), e5], dim=1))
-        d4 = self.dec4(torch.cat([_upsample_like(d5, e4), e4], dim=1))
-        d3 = self.dec3(torch.cat([_upsample_like(d4, e3), e3], dim=1))
-        d2 = self.dec2(torch.cat([_upsample_like(d3, e2), e2], dim=1))
-        d1 = self.dec1(torch.cat([_upsample_like(d2, e1), e1], dim=1))
-
-        return d1 + x_in
+    def forward(self, x):
+        hxin = self.rebnconvin(x)
+        hx1 = self.rebnconv1(hxin)
+        hx2 = self.rebnconv2(self.pool1(hx1))
+        hx3 = self.rebnconv3(self.pool2(hx2))
+        hx4 = self.rebnconv4(self.pool3(hx3))
+        hx5 = self.rebnconv5(self.pool4(hx4))
+        hx6 = self.rebnconv6(self.pool5(hx5))
+        hx7 = self.rebnconv7(hx6)
+        hx6d = self.rebnconv6d(torch.cat((hx7, hx6), 1))
+        hx5d = self.rebnconv5d(torch.cat((_upsample_like(hx6d, hx5), hx5), 1))
+        hx4d = self.rebnconv4d(torch.cat((_upsample_like(hx5d, hx4), hx4), 1))
+        hx3d = self.rebnconv3d(torch.cat((_upsample_like(hx4d, hx3), hx3), 1))
+        hx2d = self.rebnconv2d(torch.cat((_upsample_like(hx3d, hx2), hx2), 1))
+        hx1d = self.rebnconv1d(torch.cat((_upsample_like(hx2d, hx1), hx1), 1))
+        return hx1d + hxin
 
 
 class RSU6(nn.Module):
-    """Residual U-block with 6 levels."""
-
-    def __init__(self, in_ch: int, mid_ch: int, out_ch: int):
-        super().__init__()
-        self.conv_in = ConvBnRelu(in_ch, out_ch)
-
-        self.enc1 = ConvBnRelu(out_ch, mid_ch)
+    def __init__(self, in_ch=3, mid_ch=12, out_ch=3):
+        super(RSU6, self).__init__()
+        self.rebnconvin = REBNCONV(in_ch, out_ch, dirate=1)
+        self.rebnconv1 = REBNCONV(out_ch, mid_ch, dirate=1)
         self.pool1 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc2 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv2 = REBNCONV(mid_ch, mid_ch, dirate=1)
         self.pool2 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc3 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv3 = REBNCONV(mid_ch, mid_ch, dirate=1)
         self.pool3 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc4 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv4 = REBNCONV(mid_ch, mid_ch, dirate=1)
         self.pool4 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc5 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv5 = REBNCONV(mid_ch, mid_ch, dirate=1)
+        self.rebnconv6 = REBNCONV(mid_ch, mid_ch, dirate=2)
+        self.rebnconv5d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv4d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv3d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv2d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv1d = REBNCONV(mid_ch * 2, out_ch, dirate=1)
 
-        self.bottleneck = ConvBnRelu(mid_ch, mid_ch, dilation=2)
-
-        self.dec5 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec4 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec3 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec2 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec1 = ConvBnRelu(mid_ch * 2, out_ch)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x_in = self.conv_in(x)
-
-        e1 = self.enc1(x_in)
-        e2 = self.enc2(self.pool1(e1))
-        e3 = self.enc3(self.pool2(e2))
-        e4 = self.enc4(self.pool3(e3))
-        e5 = self.enc5(self.pool4(e4))
-
-        b = self.bottleneck(e5)
-
-        d5 = self.dec5(torch.cat([b, e5], dim=1))
-        d4 = self.dec4(torch.cat([_upsample_like(d5, e4), e4], dim=1))
-        d3 = self.dec3(torch.cat([_upsample_like(d4, e3), e3], dim=1))
-        d2 = self.dec2(torch.cat([_upsample_like(d3, e2), e2], dim=1))
-        d1 = self.dec1(torch.cat([_upsample_like(d2, e1), e1], dim=1))
-
-        return d1 + x_in
+    def forward(self, x):
+        hxin = self.rebnconvin(x)
+        hx1 = self.rebnconv1(hxin)
+        hx2 = self.rebnconv2(self.pool1(hx1))
+        hx3 = self.rebnconv3(self.pool2(hx2))
+        hx4 = self.rebnconv4(self.pool3(hx3))
+        hx5 = self.rebnconv5(self.pool4(hx4))
+        hx6 = self.rebnconv6(hx5)
+        hx5d = self.rebnconv5d(torch.cat((hx6, hx5), 1))
+        hx4d = self.rebnconv4d(torch.cat((_upsample_like(hx5d, hx4), hx4), 1))
+        hx3d = self.rebnconv3d(torch.cat((_upsample_like(hx4d, hx3), hx3), 1))
+        hx2d = self.rebnconv2d(torch.cat((_upsample_like(hx3d, hx2), hx2), 1))
+        hx1d = self.rebnconv1d(torch.cat((_upsample_like(hx2d, hx1), hx1), 1))
+        return hx1d + hxin
 
 
 class RSU5(nn.Module):
-    """Residual U-block with 5 levels."""
-
-    def __init__(self, in_ch: int, mid_ch: int, out_ch: int):
-        super().__init__()
-        self.conv_in = ConvBnRelu(in_ch, out_ch)
-
-        self.enc1 = ConvBnRelu(out_ch, mid_ch)
+    def __init__(self, in_ch=3, mid_ch=12, out_ch=3):
+        super(RSU5, self).__init__()
+        self.rebnconvin = REBNCONV(in_ch, out_ch, dirate=1)
+        self.rebnconv1 = REBNCONV(out_ch, mid_ch, dirate=1)
         self.pool1 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc2 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv2 = REBNCONV(mid_ch, mid_ch, dirate=1)
         self.pool2 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc3 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv3 = REBNCONV(mid_ch, mid_ch, dirate=1)
         self.pool3 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc4 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv4 = REBNCONV(mid_ch, mid_ch, dirate=1)
+        self.rebnconv5 = REBNCONV(mid_ch, mid_ch, dirate=2)
+        self.rebnconv4d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv3d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv2d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv1d = REBNCONV(mid_ch * 2, out_ch, dirate=1)
 
-        self.bottleneck = ConvBnRelu(mid_ch, mid_ch, dilation=2)
-
-        self.dec4 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec3 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec2 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec1 = ConvBnRelu(mid_ch * 2, out_ch)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x_in = self.conv_in(x)
-
-        e1 = self.enc1(x_in)
-        e2 = self.enc2(self.pool1(e1))
-        e3 = self.enc3(self.pool2(e2))
-        e4 = self.enc4(self.pool3(e3))
-
-        b = self.bottleneck(e4)
-
-        d4 = self.dec4(torch.cat([b, e4], dim=1))
-        d3 = self.dec3(torch.cat([_upsample_like(d4, e3), e3], dim=1))
-        d2 = self.dec2(torch.cat([_upsample_like(d3, e2), e2], dim=1))
-        d1 = self.dec1(torch.cat([_upsample_like(d2, e1), e1], dim=1))
-
-        return d1 + x_in
+    def forward(self, x):
+        hxin = self.rebnconvin(x)
+        hx1 = self.rebnconv1(hxin)
+        hx2 = self.rebnconv2(self.pool1(hx1))
+        hx3 = self.rebnconv3(self.pool2(hx2))
+        hx4 = self.rebnconv4(self.pool3(hx3))
+        hx5 = self.rebnconv5(hx4)
+        hx4d = self.rebnconv4d(torch.cat((hx5, hx4), 1))
+        hx3d = self.rebnconv3d(torch.cat((_upsample_like(hx4d, hx3), hx3), 1))
+        hx2d = self.rebnconv2d(torch.cat((_upsample_like(hx3d, hx2), hx2), 1))
+        hx1d = self.rebnconv1d(torch.cat((_upsample_like(hx2d, hx1), hx1), 1))
+        return hx1d + hxin
 
 
 class RSU4(nn.Module):
-    """Residual U-block with 4 levels."""
-
-    def __init__(self, in_ch: int, mid_ch: int, out_ch: int):
-        super().__init__()
-        self.conv_in = ConvBnRelu(in_ch, out_ch)
-
-        self.enc1 = ConvBnRelu(out_ch, mid_ch)
+    def __init__(self, in_ch=3, mid_ch=12, out_ch=3):
+        super(RSU4, self).__init__()
+        self.rebnconvin = REBNCONV(in_ch, out_ch, dirate=1)
+        self.rebnconv1 = REBNCONV(out_ch, mid_ch, dirate=1)
         self.pool1 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc2 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv2 = REBNCONV(mid_ch, mid_ch, dirate=1)
         self.pool2 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-        self.enc3 = ConvBnRelu(mid_ch, mid_ch)
+        self.rebnconv3 = REBNCONV(mid_ch, mid_ch, dirate=1)
+        self.rebnconv4 = REBNCONV(mid_ch, mid_ch, dirate=2)
+        self.rebnconv3d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv2d = REBNCONV(mid_ch * 2, mid_ch, dirate=1)
+        self.rebnconv1d = REBNCONV(mid_ch * 2, out_ch, dirate=1)
 
-        self.bottleneck = ConvBnRelu(mid_ch, mid_ch, dilation=2)
-
-        self.dec3 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec2 = ConvBnRelu(mid_ch * 2, mid_ch)
-        self.dec1 = ConvBnRelu(mid_ch * 2, out_ch)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x_in = self.conv_in(x)
-
-        e1 = self.enc1(x_in)
-        e2 = self.enc2(self.pool1(e1))
-        e3 = self.enc3(self.pool2(e2))
-
-        b = self.bottleneck(e3)
-
-        d3 = self.dec3(torch.cat([b, e3], dim=1))
-        d2 = self.dec2(torch.cat([_upsample_like(d3, e2), e2], dim=1))
-        d1 = self.dec1(torch.cat([_upsample_like(d2, e1), e1], dim=1))
-
-        return d1 + x_in
+    def forward(self, x):
+        hxin = self.rebnconvin(x)
+        hx1 = self.rebnconv1(hxin)
+        hx2 = self.rebnconv2(self.pool1(hx1))
+        hx3 = self.rebnconv3(self.pool2(hx2))
+        hx4 = self.rebnconv4(hx3)
+        hx3d = self.rebnconv3d(torch.cat((hx4, hx3), 1))
+        hx2d = self.rebnconv2d(torch.cat((_upsample_like(hx3d, hx2), hx2), 1))
+        hx1d = self.rebnconv1d(torch.cat((_upsample_like(hx2d, hx1), hx1), 1))
+        return hx1d + hxin
 
 
 class RSU4F(nn.Module):
-    """RSU4 with dilated convolutions instead of pooling (for small feature maps)."""
+    def __init__(self, in_ch=3, mid_ch=12, out_ch=3):
+        super(RSU4F, self).__init__()
+        self.rebnconvin = REBNCONV(in_ch, out_ch, dirate=1)
+        self.rebnconv1 = REBNCONV(out_ch, mid_ch, dirate=1)
+        self.rebnconv2 = REBNCONV(mid_ch, mid_ch, dirate=2)
+        self.rebnconv3 = REBNCONV(mid_ch, mid_ch, dirate=4)
+        self.rebnconv4 = REBNCONV(mid_ch, mid_ch, dirate=8)
+        self.rebnconv3d = REBNCONV(mid_ch * 2, mid_ch, dirate=4)
+        self.rebnconv2d = REBNCONV(mid_ch * 2, mid_ch, dirate=2)
+        self.rebnconv1d = REBNCONV(mid_ch * 2, out_ch, dirate=1)
 
-    def __init__(self, in_ch: int, mid_ch: int, out_ch: int):
-        super().__init__()
-        self.conv_in = ConvBnRelu(in_ch, out_ch)
-
-        self.enc1 = ConvBnRelu(out_ch, mid_ch)
-        self.enc2 = ConvBnRelu(mid_ch, mid_ch, dilation=2)
-        self.enc3 = ConvBnRelu(mid_ch, mid_ch, dilation=4)
-
-        self.bottleneck = ConvBnRelu(mid_ch, mid_ch, dilation=8)
-
-        self.dec3 = ConvBnRelu(mid_ch * 2, mid_ch, dilation=4)
-        self.dec2 = ConvBnRelu(mid_ch * 2, mid_ch, dilation=2)
-        self.dec1 = ConvBnRelu(mid_ch * 2, out_ch)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x_in = self.conv_in(x)
-
-        e1 = self.enc1(x_in)
-        e2 = self.enc2(e1)
-        e3 = self.enc3(e2)
-
-        b = self.bottleneck(e3)
-
-        d3 = self.dec3(torch.cat([b, e3], dim=1))
-        d2 = self.dec2(torch.cat([d3, e2], dim=1))
-        d1 = self.dec1(torch.cat([d2, e1], dim=1))
-
-        return d1 + x_in
-
-
-def _upsample_like(src: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-    return F.interpolate(src, size=target.shape[2:], mode="bilinear", align_corners=False)
+    def forward(self, x):
+        hxin = self.rebnconvin(x)
+        hx1 = self.rebnconv1(hxin)
+        hx2 = self.rebnconv2(hx1)
+        hx3 = self.rebnconv3(hx2)
+        hx4 = self.rebnconv4(hx3)
+        hx3d = self.rebnconv3d(torch.cat((hx4, hx3), 1))
+        hx2d = self.rebnconv2d(torch.cat((hx3d, hx2), 1))
+        hx1d = self.rebnconv1d(torch.cat((hx2d, hx1), 1))
+        return hx1d + hxin
 
 
 class U2Net(nn.Module):
-    """Full U2Net architecture."""
+    def __init__(self, in_ch=3, out_ch=1):
+        super(U2Net, self).__init__()
 
-    def __init__(self, in_ch: int = 3, out_ch: int = 1):
-        super().__init__()
-
-        # Encoder
         self.stage1 = RSU7(in_ch, 32, 64)
-        self.pool1 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+        self.pool12 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
         self.stage2 = RSU6(64, 32, 128)
-        self.pool2 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+        self.pool23 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
         self.stage3 = RSU5(128, 64, 256)
-        self.pool3 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+        self.pool34 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
         self.stage4 = RSU4(256, 128, 512)
-        self.pool4 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+        self.pool45 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
         self.stage5 = RSU4F(512, 256, 512)
-        self.pool5 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
-
-        # Bottleneck
+        self.pool56 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
         self.stage6 = RSU4F(512, 256, 512)
 
         # Decoder
@@ -250,7 +205,6 @@ class U2Net(nn.Module):
         self.stage2d = RSU6(256, 32, 64)
         self.stage1d = RSU7(128, 16, 64)
 
-        # Side output convolutions
         self.side1 = nn.Conv2d(64, out_ch, 3, padding=1)
         self.side2 = nn.Conv2d(64, out_ch, 3, padding=1)
         self.side3 = nn.Conv2d(128, out_ch, 3, padding=1)
@@ -258,34 +212,30 @@ class U2Net(nn.Module):
         self.side5 = nn.Conv2d(512, out_ch, 3, padding=1)
         self.side6 = nn.Conv2d(512, out_ch, 3, padding=1)
 
-        # Fuse all side outputs
-        self.fuse = nn.Conv2d(out_ch * 6, out_ch, 1)
+        self.outconv = nn.Conv2d(6 * out_ch, out_ch, 1)
 
-    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
-        # Encoder
-        s1 = self.stage1(x)
-        s2 = self.stage2(self.pool1(s1))
-        s3 = self.stage3(self.pool2(s2))
-        s4 = self.stage4(self.pool3(s3))
-        s5 = self.stage5(self.pool4(s4))
-        s6 = self.stage6(self.pool5(s5))
+    def forward(self, x):
+        hx1 = self.stage1(x)
+        hx2 = self.stage2(self.pool12(hx1))
+        hx3 = self.stage3(self.pool23(hx2))
+        hx4 = self.stage4(self.pool34(hx3))
+        hx5 = self.stage5(self.pool45(hx4))
+        hx6 = self.stage6(self.pool56(hx5))
 
-        # Decoder
-        s5d = self.stage5d(torch.cat([_upsample_like(s6, s5), s5], dim=1))
-        s4d = self.stage4d(torch.cat([_upsample_like(s5d, s4), s4], dim=1))
-        s3d = self.stage3d(torch.cat([_upsample_like(s4d, s3), s3], dim=1))
-        s2d = self.stage2d(torch.cat([_upsample_like(s3d, s2), s2], dim=1))
-        s1d = self.stage1d(torch.cat([_upsample_like(s2d, s1), s1], dim=1))
+        hx5d = self.stage5d(torch.cat((_upsample_like(hx6, hx5), hx5), 1))
+        hx4d = self.stage4d(torch.cat((_upsample_like(hx5d, hx4), hx4), 1))
+        hx3d = self.stage3d(torch.cat((_upsample_like(hx4d, hx3), hx3), 1))
+        hx2d = self.stage2d(torch.cat((_upsample_like(hx3d, hx2), hx2), 1))
+        hx1d = self.stage1d(torch.cat((_upsample_like(hx2d, hx1), hx1), 1))
 
-        # Side outputs
-        d1 = self.side1(s1d)
-        d2 = _upsample_like(self.side2(s2d), d1)
-        d3 = _upsample_like(self.side3(s3d), d1)
-        d4 = _upsample_like(self.side4(s4d), d1)
-        d5 = _upsample_like(self.side5(s5d), d1)
-        d6 = _upsample_like(self.side6(s6), d1)
+        d1 = self.side1(hx1d)
+        d2 = _upsample_like(self.side2(hx2d), d1)
+        d3 = _upsample_like(self.side3(hx3d), d1)
+        d4 = _upsample_like(self.side4(hx4d), d1)
+        d5 = _upsample_like(self.side5(hx5d), d1)
+        d6 = _upsample_like(self.side6(hx6), d1)
 
-        d0 = self.fuse(torch.cat([d1, d2, d3, d4, d5, d6], dim=1))
+        d0 = self.outconv(torch.cat((d1, d2, d3, d4, d5, d6), 1))
 
         return [torch.sigmoid(d0), torch.sigmoid(d1), torch.sigmoid(d2),
                 torch.sigmoid(d3), torch.sigmoid(d4), torch.sigmoid(d5),

@@ -17,12 +17,15 @@ elif torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-# Load model
-model_path = Path(__file__).parent / "models" / "u2net_fashion.pth"
+# Load model — prefer pretrained (better on product shots), fall back to fashion-trained
+models_dir = Path(__file__).parent / "models"
+model_path = models_dir / "u2net_pretrained.pth"
+if not model_path.exists():
+    model_path = models_dir / "u2net_fashion.pth"
 if not model_path.exists():
     raise FileNotFoundError(
-        f"Model not found at {model_path}. "
-        "Train first with: cd server && python training/train.py"
+        f"No model found in {models_dir}. "
+        "Download pretrained weights or train with: python training/train.py"
     )
 
 print(f"Loading model on {device}...")
