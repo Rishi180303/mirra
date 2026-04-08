@@ -4,9 +4,12 @@ export interface GarmentInfo {
   category?: "tops" | "bottoms" | "one-pieces";
 }
 
-export interface TryOnRequest {
+export interface GarmentInput {
   garmentImageUrl: string;
   garmentImageBase64?: string;
-  category?: string;
-  size?: string;
+}
+
+export interface TryOnRequest {
+  garments: GarmentInput[];
+  avatarOverride?: string | null;
 }

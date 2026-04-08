@@ -8,8 +8,10 @@ type Page = "collection" | "dressing-room";
 export default function App() {
   const [page, setPage] = useState<Page>("collection");
   const [items, setItems] = useState<string[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [savedLook, setSavedLook] = useState<string | null>(null);
+  const [wornIndices, setWornIndices] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,56 +41,91 @@ export default function App() {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const handleTryOn = () => {
+  const handleEnterDressingRoom = () => {
     setPage("dressing-room");
-    setSelectedIndex(0);
+    setSelectedIndices(new Set());
     setResultImage(null);
+    setSavedLook(null);
+    setWornIndices(new Set());
     setError(null);
   };
 
   const handleBack = () => {
     setPage("collection");
     setResultImage(null);
+    setSavedLook(null);
+    setWornIndices(new Set());
+    setSelectedIndices(new Set());
     setError(null);
     setLoading(false);
   };
 
+  const handleToggle = (index: number) => {
+    setSelectedIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+    setResultImage(null);
+    setError(null);
+  };
+
+  const handleSave = () => {
+    if (!resultImage) return;
+    setSavedLook(resultImage);
+    setWornIndices(new Set(selectedIndices));
+    setResultImage(null);
+  };
+
   const handleWear = async () => {
-    const garmentUrl = items[selectedIndex];
-    if (!garmentUrl) return;
+    if (selectedIndices.size === 0) return;
 
     setLoading(true);
     setError(null);
 
-    let garmentImageBase64: string | undefined;
-    try {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error("Failed to load garment image"));
-        img.src = garmentUrl;
-      });
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, 0, 0);
-      garmentImageBase64 = canvas.toDataURL("image/jpeg", 0.92);
-    } catch {
-      // fallback: let background fetch directly
-    }
+    const garments = await Promise.all(
+      Array.from(selectedIndices).map(async (i) => {
+        const url = items[i];
+        let garmentImageBase64: string | undefined;
+        try {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject();
+            img.src = url;
+          });
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext("2d")!;
+          ctx.drawImage(img, 0, 0);
+          garmentImageBase64 = canvas.toDataURL("image/jpeg", 0.92);
+        } catch {
+          // fallback
+        }
+        return { garmentImageUrl: url, garmentImageBase64 };
+      })
+    );
 
     chrome.runtime.sendMessage({
       type: MSG.TRY_ON_REQUEST,
       payload: {
-        garmentImageUrl: garmentUrl,
-        garmentImageBase64,
+        garments,
+        avatarOverride: savedLook || null,
       },
     });
   };
 
-  const displayImage = resultImage || "avatar.png";
+  const displayImage = resultImage || savedLook || "avatar.png";
+  const hasUnsavedResult = !!resultImage && !loading;
+
+  // Check if current selection matches what's already worn
+  const selectionMatchesWorn =
+    selectedIndices.size > 0 &&
+    selectedIndices.size === wornIndices.size &&
+    Array.from(selectedIndices).every((i) => wornIndices.has(i));
 
   // ── Collection page ──
   if (page === "collection") {
@@ -110,7 +147,7 @@ export default function App() {
 
         {items.length > 0 && (
           <button
-            onClick={handleTryOn}
+            onClick={handleEnterDressingRoom}
             className="w-full py-3 text-[10px] tracking-[0.2em] uppercase text-black hover:tracking-[0.3em] transition-all duration-500"
           >
             Try them on
@@ -153,20 +190,19 @@ export default function App() {
       </div>
 
       {/* Result actions */}
-      {resultImage && !loading && (
+      {hasUnsavedResult && (
         <div className="flex gap-4">
-          <a
-            href={resultImage}
-            download="mirra-result.png"
+          <button
+            onClick={handleSave}
             className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-500"
           >
-            Save
-          </a>
+            Save look
+          </button>
           <button
             onClick={() => setResultImage(null)}
             className="text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-500"
           >
-            Reset
+            Discard
           </button>
         </div>
       )}
@@ -178,28 +214,30 @@ export default function App() {
         </span>
       )}
 
-      {/* Carousel */}
+      {/* Garment selector */}
       <Carousel
         items={items}
-        selectedIndex={selectedIndex}
-        onSelect={(i) => {
-          setSelectedIndex(i);
-          setResultImage(null);
-          setError(null);
-        }}
+        selectedIndices={selectedIndices}
+        onToggle={handleToggle}
       />
 
       {/* Wear it button */}
       <button
         onClick={handleWear}
-        disabled={loading}
+        disabled={loading || selectedIndices.size === 0 || selectionMatchesWorn}
         className={`w-full py-3 text-[10px] tracking-[0.2em] uppercase transition-all duration-500 ${
-          loading
+          loading || selectedIndices.size === 0 || selectionMatchesWorn
             ? "text-neutral-300 cursor-default"
             : "text-black hover:tracking-[0.3em]"
         }`}
       >
-        {loading ? "Generating..." : "Wear it"}
+        {loading
+          ? "Generating..."
+          : selectionMatchesWorn
+            ? "Already wearing"
+            : selectedIndices.size === 0
+              ? "Select pieces"
+              : `Wear ${selectedIndices.size === 1 ? "it" : "them"}`}
       </button>
     </div>
   );
