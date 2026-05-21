@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import CollectionGrid from "./components/CollectionGrid";
 import Carousel from "./components/Carousel";
+import HistoryView from "./components/HistoryView";
 import { MSG } from "../shared/messages";
+import { saveFit } from "../storage/fitsDb";
 
-type Page = "collection" | "dressing-room";
+type Page = "collection" | "dressing-room" | "history";
 
 export default function App() {
   const [page, setPage] = useState<Page>("collection");
+  const [previousPage, setPreviousPage] = useState<Exclude<Page, "history">>("collection");
   const [items, setItems] = useState<string[]>([]);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [resultImage, setResultImage] = useState<string | null>(null);
@@ -71,11 +74,30 @@ export default function App() {
     setError(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!resultImage) return;
-    setSavedLook(resultImage);
+    const imageToSave = resultImage;
+    const countToSave = selectedIndices.size;
+
+    setSavedLook(imageToSave);
     setWornIndices(new Set(selectedIndices));
     setResultImage(null);
+
+    try {
+      const blob = await fetch(imageToSave).then((r) => r.blob());
+      await saveFit(blob, { garmentCount: countToSave });
+    } catch (err) {
+      console.error("Failed to save fit to history:", err);
+    }
+  };
+
+  const goToHistory = () => {
+    if (page !== "history") setPreviousPage(page);
+    setPage("history");
+  };
+
+  const backFromHistory = () => {
+    setPage(previousPage);
   };
 
   const handleWear = async () => {
@@ -127,13 +149,26 @@ export default function App() {
     selectedIndices.size === wornIndices.size &&
     Array.from(selectedIndices).every((i) => wornIndices.has(i));
 
+  // ── History page ──
+  if (page === "history") {
+    return <HistoryView onBack={backFromHistory} />;
+  }
+
   // ── Collection page ──
   if (page === "collection") {
     return (
       <div className="px-6 py-8 flex flex-col gap-6">
-        <span className="text-[11px] font-normal tracking-[0.35em] uppercase">
-          Mirra
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-normal tracking-[0.35em] uppercase">
+            Mirra
+          </span>
+          <button
+            onClick={goToHistory}
+            className="text-[9px] tracking-[0.15em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-300"
+          >
+            History
+          </button>
+        </div>
 
         <span className="text-[9px] tracking-[0.15em] uppercase font-light text-neutral-400">
           Pick your pieces
@@ -161,16 +196,24 @@ export default function App() {
   return (
     <div className="px-6 py-8 flex flex-col gap-6">
       {/* Header with back */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleBack}
+            className="text-[14px] font-light text-neutral-400 hover:text-black transition-colors duration-300"
+          >
+            &larr;
+          </button>
+          <span className="text-[11px] font-normal tracking-[0.35em] uppercase">
+            Mirra
+          </span>
+        </div>
         <button
-          onClick={handleBack}
-          className="text-[14px] font-light text-neutral-400 hover:text-black transition-colors duration-300"
+          onClick={goToHistory}
+          className="text-[9px] tracking-[0.15em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-300"
         >
-          &larr;
+          History
         </button>
-        <span className="text-[11px] font-normal tracking-[0.35em] uppercase">
-          Mirra
-        </span>
       </div>
 
       {/* Avatar / result */}
