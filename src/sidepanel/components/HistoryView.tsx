@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useFitHistory } from "../../hooks/useFitHistory";
 import FitCard from "./FitCard";
+import FitPreview from "./FitPreview";
 
 interface Props {
   onBack: () => void;
@@ -19,8 +20,12 @@ export default function HistoryView({ onBack }: Props) {
     remove,
   } = useFitHistory();
   const [tab, setTab] = useState<Tab>("recent");
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const visible = tab === "recent" ? fits : favorites;
+  // Derive from the live list so the preview reflects favorite/delete updates;
+  // if the open fit disappears (deleted / unfavorited off this tab), it closes.
+  const openFit = openId != null ? visible.find((f) => f.id === openId) ?? null : null;
   const showToggle =
     tab === "recent" && !loading && (showAll || fits.length === 10);
 
@@ -84,12 +89,7 @@ export default function HistoryView({ onBack }: Props) {
       {!loading && visible.length > 0 && (
         <div className="grid grid-cols-2 gap-3">
           {visible.map((fit) => (
-            <FitCard
-              key={fit.id}
-              fit={fit}
-              onToggleFavorite={toggleFavorite}
-              onDelete={remove}
-            />
+            <FitCard key={fit.id} fit={fit} onOpen={setOpenId} />
           ))}
         </div>
       )}
@@ -101,6 +101,15 @@ export default function HistoryView({ onBack }: Props) {
         >
           {showAll ? "Show less" : "See all"}
         </button>
+      )}
+
+      {openFit && (
+        <FitPreview
+          fit={openFit}
+          onClose={() => setOpenId(null)}
+          onToggleFavorite={toggleFavorite}
+          onDelete={remove}
+        />
       )}
     </div>
   );
