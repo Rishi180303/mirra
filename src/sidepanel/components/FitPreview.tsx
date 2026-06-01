@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useObjectUrl } from "../../hooks/useObjectUrl";
-import { reencodeToPng, type SavedFit } from "../../storage/fitsDb";
+import type { SavedFit } from "../../storage/fitsDb";
 
 interface Props {
   fit: SavedFit;
@@ -9,9 +9,7 @@ interface Props {
   onDelete: (id: string) => Promise<void>;
 }
 
-type Feedback = "idle" | "copied" | "saved";
-
-const actionClass =
+const labelClass =
   "text-[9px] tracking-[0.1em] uppercase font-light text-neutral-400 hover:text-black transition-colors duration-500";
 
 export default function FitPreview({
@@ -21,12 +19,7 @@ export default function FitPreview({
   onDelete,
 }: Props) {
   const imageUrl = useObjectUrl(fit.imageBlob);
-  const [feedback, setFeedback] = useState<Feedback>("idle");
-
-  const flash = (state: Exclude<Feedback, "idle">) => {
-    setFeedback(state);
-    setTimeout(() => setFeedback("idle"), 1500);
-  };
+  const [saved, setSaved] = useState(false);
 
   const handleDownload = () => {
     const ext = fit.imageBlob.type === "image/png" ? "png" : "jpg";
@@ -38,23 +31,8 @@ export default function FitPreview({
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
-    flash("saved");
-  };
-
-  const handleCopy = async () => {
-    try {
-      const type = ClipboardItem.supports?.(fit.imageBlob.type)
-        ? fit.imageBlob.type
-        : "image/png";
-      const blob =
-        type === fit.imageBlob.type
-          ? fit.imageBlob
-          : await reencodeToPng(fit.imageBlob);
-      await navigator.clipboard.write([new ClipboardItem({ [type]: blob })]);
-      flash("copied");
-    } catch (err) {
-      console.error("Failed to copy fit:", err);
-    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
   };
 
   const handleDelete = async () => {
@@ -90,17 +68,20 @@ export default function FitPreview({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-center gap-5">
-        <button onClick={() => onToggleFavorite(fit.id)} className={actionClass}>
-          {fit.favorited ? "Favorited" : "Favorite"}
+      <div className="flex items-center justify-center gap-6">
+        <button
+          onClick={() => onToggleFavorite(fit.id)}
+          aria-label={fit.favorited ? "Unfavorite" : "Favorite"}
+          className={`text-[13px] leading-none transition-colors duration-500 ${
+            fit.favorited ? "text-black" : "text-neutral-400 hover:text-black"
+          }`}
+        >
+          {fit.favorited ? "♥" : "♡"}
         </button>
-        <button onClick={handleDownload} className={actionClass}>
-          {feedback === "saved" ? "Saved" : "Download"}
+        <button onClick={handleDownload} className={labelClass}>
+          {saved ? "Saved" : "Download"}
         </button>
-        <button onClick={handleCopy} className={actionClass}>
-          {feedback === "copied" ? "Copied" : "Copy"}
-        </button>
-        <button onClick={handleDelete} className={actionClass}>
+        <button onClick={handleDelete} className={labelClass}>
           Delete
         </button>
       </div>

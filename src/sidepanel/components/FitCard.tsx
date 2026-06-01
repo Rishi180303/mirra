@@ -25,7 +25,7 @@ export default function FitCard({ fit, onOpen }: Props) {
 
       {fit.favorited && (
         <span className="absolute top-1.5 right-1.5 text-[11px] text-black drop-shadow-sm">
-          ★
+          ♥
         </span>
       )}
     </button>
