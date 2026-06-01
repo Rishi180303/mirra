@@ -1,6 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
-const DB_NAME = "mirra";
+const DB_NAME = "mirra-fits";
 const DB_VERSION = 1;
 const STORE = "fits";
 const THUMBNAIL_WIDTH = 200;
